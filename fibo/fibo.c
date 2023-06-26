@@ -3,6 +3,11 @@
 
 int fibo(int n)
 {
+    if(n < 0)
+    {
+        return -1;
+    }
+    
     int a = 0;
     int b = 0;
     int c = 1;
