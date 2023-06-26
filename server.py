@@ -1,8 +1,7 @@
 import socket
 import ctypes
 import threading
-from threading import Thread
-import sys
+import os
 
 # Create a socket object
 
@@ -31,9 +30,9 @@ def fibonacci(n):
 
 def client_request(conn, addr):
     connected = True
-    tochange = -1
+    isempty = True
     while connected:
-        msg = conn.recv(1024).decode(form)
+        msg = conn.recv(4096).decode(form)
         if not msg:
             connected = False
         if(msg == "DISCONNECT"):
@@ -43,19 +42,21 @@ def client_request(conn, addr):
                 msg = msg[5:]
                 try:
                     msg = int(msg)
+                    #check if the library exists
+                    if(os.path.exists('./fibo/libfibo.so') == False):
+                        conn.send('The fibonacci library does not exist'.encode(form))
+                        continue
                     result = fibonacci(msg)
                     listtaks.append((msg, result))
-                    tochange+=1
-                    tosend = "[scheduled] fibo " + str(msg)
-                    conn.send(tosend.encode(form))
+                    isempty = False
                 except ValueError:
                     conn.send('Please enter a number after the send'.encode(form))
             elif (msg == "list"):
-                if(tochange == -1):
+                if(isempty):
                     conn.send('There are no scheduled tasks'.encode(form))
                 else:
                     for i in range(len(listtaks)):
-                        if(i != len(listtaks) - 1 and listtaks[i][1] != None):
+                        if(i != len(listtaks) - 1):
                             msg1 = "[done] fibo " + str(listtaks[i][0]) + " (result " + str(listtaks[i][1]) + ")" + "\n"
                             conn.send(msg1.encode(form))
                         else:

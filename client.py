@@ -20,7 +20,9 @@ def send(msg):
 def start():
     while True:
         msg = input('my_client ')
-        client.send(msg.encode('utf-8'))
+        send(msg)
+        if(msg.startswith('send')):
+            continue
         print(client.recv(4096).decode('utf-8'))
 
 
