@@ -1,8 +1,8 @@
+from concurrent.futures import ThreadPoolExecutor
 import socket
 import ctypes
 import threading
 import os
-#from threading import Thread
 
 # Create a socket object
 
@@ -13,31 +13,16 @@ port = 3000
 server = 'localhost'
 form = 'utf-8'
 
-    
-listtaks = []
-# thread_list = list()
+
+thread_list = list()
 
 try:
     s.bind((server, port))
 except socket.error as msg:
     print('Bind failed. Error Code : ' + str(msg[0]) + ' Message ' + msg[1])
 
-# class ThreadWithReturnValue(Thread):
-    
-#     def __init__(self, group=None, target=None, name=None,
-#                  args=(), kwargs={}, Verbose=None):
-#         Thread.__init__(self, group, target, name, args, kwargs)
-#         self._return = None
 
-#     def run(self):
-#         if self._target is not None:
-#             self._return = self._target(*self._args,
-#                                                 **self._kwargs)
-#     def join(self, *args):
-#         Thread.join(self, *args)
-#         return self._return
-    
-
+pool = ThreadPoolExecutor(max_workers=4)
 #function that uses the dynamic library of fibonacci and returns the result to the client
 
 def fibonacci(n):
@@ -63,11 +48,8 @@ def client_request(conn, addr):
                     if(os.path.exists('./fibo/libfibo.so') == False):
                         conn.send('The fibonacci library does not exist'.encode(form))
                         continue
-                    result = fibonacci(msg)
-                    # t = ThreadWithReturnValue(target=fibonacci, args=(msg,))
-                    # thread_list.append(t)
-                    # t.start()
-                    listtaks.append((msg,result))
+                    t = pool.submit(fibonacci, msg)
+                    thread_list.append((t,msg))
                     isempty = False
                 except ValueError:
                     conn.send('Please enter a number after the send'.encode(form))
@@ -75,23 +57,18 @@ def client_request(conn, addr):
                 if(isempty):
                     conn.send('There are no scheduled tasks'.encode(form))
                 else:
-                    # for process in thread_list:
-                        # if(process.is_alive()):
-                        #     msg2 = "[scheduled] fibo " + str(process._args[0])
-                        #     conn.send(msg2.encode(form))
-                        # else:
-                        #     result = process.join()
-                        #     msg1 = "[done] fibo " + str(process._args[0]) + " (result " + str(result) + ")"
-                        #     conn.send(msg1.encode(form))
-                        # if(process != thread_list[len(thread_list) - 1]):
-                        #     conn.send('\n'.encode(form))
-                        for i in range(len(listtaks)):
-                            if(i != len(listtaks) - 1):
-                                msg1 = "[done] fibo " + str(listtaks[i][0]) + " (result " + str(listtaks[i][1]) + ")" + "\n"
-                                conn.send(msg1.encode(form))
-                            else:
-                                msg2 = "[scheduled] fibo " + str(listtaks[i][0])
-                                conn.send(msg2.encode(form))
+                    res = ""
+                    for process,msg in thread_list:
+                        if(process.running()):
+                            msg2 = "[scheduled] fibo " + str(msg)
+                            res+=msg2
+                        else:
+                            result = process.result()
+                            msg1 = "[done] fibo " + str(msg) + " (result " + str(result) + ")"
+                            res+=msg1
+                        if(process != thread_list[len(thread_list) - 1][0]):
+                            res+="\n"
+                    conn.send(res.encode(form))
             else:
                 conn.send('Please enter a valid command'.encode(form))
     conn.close()
